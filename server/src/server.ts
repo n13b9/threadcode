@@ -84,8 +84,85 @@ io.on("connection", (socket) => {
     userMap = userMap.filter((user) => user.socketId !== socket.id);
     socket.leave(roomId);
   });
-});
 
+  // handle file actions
+
+  socket.on(
+    SocketEvent.SYNC_FILE_STRUCTURE,
+    (fileStructure: any, openFiles, activeFile, socketId) => {
+      io.to(socketId).emit(SocketEvent.SYNC_FILE_STRUCTURE, {
+        fileStructure,
+        openFiles,
+        activeFile,
+      });
+    }
+  );
+
+  socket.on(SocketEvent.DIRECTORY_CREATED, ({ parentDirId, newDirectory }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.DIRECTORY_CREATED, {
+      parentDirId,
+      newDirectory,
+    });
+  });
+
+  socket.on(SocketEvent.DIRECTORY_UPDATED, ({ dirId, children }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.DIRECTORY_UPDATED, {
+      dirId,
+      children,
+    });
+  });
+
+  socket.on(SocketEvent.DIRECTORY_RENAMED, ({ dirId, newName }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.DIRECTORY_RENAMED, {
+      dirId,
+      newName,
+    });
+  });
+
+  socket.on(SocketEvent.DIRECTORY_DELETED, ({ dirId }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.DIRECTORY_DELETED, { dirId });
+  });
+
+  socket.on(SocketEvent.FILE_CREATED, ({ parentDirId, newFile }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast
+      .to(roomId)
+      .emit(SocketEvent.FILE_CREATED, { parentDirId, newFile });
+  });
+
+  socket.on(SocketEvent.FILE_UPDATED, ({ fileId, newContent }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.FILE_UPDATED, {
+      fileId,
+      newContent,
+    });
+  });
+
+  socket.on(SocketEvent.FILE_RENAMED, ({ fileId, newName }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.FILE_RENAMED, {
+      fileId,
+      newName,
+    });
+  });
+
+  socket.on(SocketEvent.FILE_DELETED, ({ fileId }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.FILE_DELETED, { fileId });
+  });
+});
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req: Request, res: Response) => {
