@@ -162,7 +162,91 @@ io.on("connection", (socket) => {
     if (!roomId) return;
     socket.broadcast.to(roomId).emit(SocketEvent.FILE_DELETED, { fileId });
   });
+
+  // handle user actions
+
+  socket.on(SocketEvent.USER_OFFLINE, ({ socketId }) => {
+    userMap = userMap.map((user) => {
+      if (user.socketId === socketId) {
+        return { ...user, status: USER_CONNECTION_STATUS.OFFLINE };
+      }
+      return user;
+    });
+    const roomId = getRoomId(socketId);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.USER_OFFLINE, { socketId });
+  });
+
+  socket.on(SocketEvent.USER_ONLINE, ({ socketId }) => {
+    userMap = userMap.map((user) => {
+      if (user.socketId === socketId) {
+        return { ...user, status: USER_CONNECTION_STATUS.ONLINE };
+      }
+      return user;
+    });
+    const roomId = getRoomId(socketId);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.USER_ONLINE, { socketId });
+  });
+
+  // handle chat actions
+  socket.on(SocketEvent.SEND_MESSAGE, ({ message }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.RECEIVE_MESSAGE, { message });
+  });
+
+  // handle cursor actions
+
+  socket.on(SocketEvent.TYPING_START, (cursorPosition) => {
+    userMap = userMap.map((user) => {
+      if (user.socketId === socket.id) {
+        return { ...user, typing: true, cursorPosition };
+      }
+      return user;
+    });
+    const user = getUserBySocketId(socket.id);
+    if (!user) return;
+    const roomId = user.roomId;
+    socket.broadcast.to(roomId).emit(SocketEvent.TYPING_START, { user });
+  });
+
+  socket.on(SocketEvent.TYPING_PAUSE, () => {
+    userMap = userMap.map((user) => {
+      if (user.socketId === socket.id) {
+        return { ...user, typing: false };
+      }
+      return user;
+    });
+    const user = getUserBySocketId(socket.id);
+    if (!user) return;
+    const roomId = user.roomId;
+    socket.broadcast.to(roomId).emit(SocketEvent.TYPING_PAUSE, { user });
+  });
+
+  socket.on(SocketEvent.REQUEST_DRAWING, () => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast
+      .to(roomId)
+      .emit(SocketEvent.REQUEST_DRAWING, { socketId: socket.id });
+  });
+
+  socket.on(SocketEvent.SYNC_DRAWING, ({ drawingData, socketId }) => {
+    socket.broadcast
+      .to(socketId)
+      .emit(SocketEvent.SYNC_DRAWING, { drawingData });
+  });
+
+  socket.on(SocketEvent.DRAWING_UPDATE, ({ snapshot }) => {
+    const roomId = getRoomId(socket.id);
+    if (!roomId) return;
+    socket.broadcast.to(roomId).emit(SocketEvent.DRAWING_UPDATE, {
+      snapshot,
+    });
+  });
 });
+
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req: Request, res: Response) => {
